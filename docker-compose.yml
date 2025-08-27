@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-zombie}
+      POSTGRES_USER: ${POSTGRES_USER:-zombie}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zombie_password}
+    volumes:
+      - zombie_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zombie} -d ${POSTGRES_DB:-zombie}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  zombie:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - zombie_sessions:/sessions
+      - zombie_media:/media
+    command: ["python", "-m", "app.main"]
+
+volumes:
+  zombie_pgdata:
+  zombie_sessions:
+  zombie_media:
